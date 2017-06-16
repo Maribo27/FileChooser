@@ -4,6 +4,9 @@ import javax.swing.event.TreeModelListener;
 import javax.swing.tree.TreeModel;
 import javax.swing.tree.TreePath;
 
+/**
+ * Created by Maria on 17.06.2017.
+ */
 public class DirectoryTreeModel implements TreeModel{
     private NodeDirectoryTree rootTree;
 

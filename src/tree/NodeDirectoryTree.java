@@ -4,12 +4,15 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Created by Maria on 17.06.2017.
+ */
 public class NodeDirectoryTree {
     private String fullPath;
     private List<NodeDirectoryTree> sonsList;
     private boolean sonsIsCreate;
 
-    public NodeDirectoryTree(String fullPath){
+    NodeDirectoryTree(String fullPath){
         this.fullPath = fullPath;
     }
 
@@ -18,7 +21,7 @@ public class NodeDirectoryTree {
     }
 
     public String toString(){
-        String name = new String();
+        String name = "";
 
         int n = fullPath.length();
         for (int i = n-1; i >=0; i--) {
@@ -30,26 +33,26 @@ public class NodeDirectoryTree {
         return name;
     }
 
-    public Object getChild(int index) {
+    Object getChild(int index) {
         if (!sonsIsCreate){
             createSonsList();
         }
         return sonsList.get(index);
     }
 
-    public int getChildCount() {
+    int getChildCount() {
         if (!sonsIsCreate){
             createSonsList();
         }
         return sonsList.size();
     }
 
-    public boolean isLeaf(){
+    boolean isLeaf(){
         File f = new File(fullPath);
         return f.isFile();
     }
 
-    public int getIndexOfChild(Object node){
+    int getIndexOfChild(Object node){
         if (!sonsIsCreate){
             createSonsList();
         }
@@ -59,7 +62,7 @@ public class NodeDirectoryTree {
 
     private void createSonsList(){
         sonsIsCreate = true;
-        sonsList = new ArrayList<NodeDirectoryTree>();
+        sonsList = new ArrayList<>();
         File[] listOfFiles;
         if (fullPath.equals("/home")){
             listOfFiles = File.listRoots();
@@ -68,19 +71,20 @@ public class NodeDirectoryTree {
             listOfFiles = folder.listFiles();
         }
 
+        assert listOfFiles != null;
         int n = listOfFiles.length;
-        for (int i = 0; i < n; i++) {
-            if (listOfFiles[i].isDirectory()){
-                if (fullPath.equals("/home")){
-                    String name = new String();
-                    String path = listOfFiles[i].getAbsolutePath();
+        for (File listOfFile : listOfFiles) {
+            if (listOfFile.isDirectory()) {
+                if (fullPath.equals("/home")) {
+                    String name = "";
+                    String path = listOfFile.getAbsolutePath();
                     int m = path.length();
-                    for (int j=0; j<m-1; j++){
+                    for (int j = 0; j < m - 1; j++) {
                         name = name + path.charAt(j);
                     }
                     sonsList.add(new NodeDirectoryTree("/" + name + "/"));
-                }else {
-                    sonsList.add(new NodeDirectoryTree(fullPath + "/" + listOfFiles[i].getName()));
+                } else {
+                    sonsList.add(new NodeDirectoryTree(fullPath + "/" + listOfFile.getName()));
                 }
             }
         }

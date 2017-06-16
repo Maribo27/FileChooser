@@ -1,6 +1,5 @@
 package controller;
 
-import model.Model;
 import view.Interface;
 
 /**
@@ -8,13 +7,11 @@ import view.Interface;
  */
 public class Controller {
     Interface view;
-    Model model;
     public Controller(){
         view = new Interface();
-        model = new Model();
     }
 
     public void runProgram(){
 
-    };
+    }
 }

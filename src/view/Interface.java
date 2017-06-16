@@ -4,15 +4,14 @@ import tree.DirectoryTreeModel;
 
 import javax.swing.*;
 import java.awt.*;
-import java.io.File;
 
 /**
  * Created by Maria on 15.06.2017.
  */
 public class Interface {
-    JFrame mainWindow;
-    JPanel topPanel, mainPanel, bottomPanel;
-    JButton homeButton, desktopButton, newFolderButton, delButton, hideButton, okButton, cancelButton;
+    private JFrame mainWindow;
+    private JPanel topPanel, mainPanel, bottomPanel;
+    private JButton homeButton, desktopButton, newFolderButton, delButton, hideButton, okButton, cancelButton;
     public Interface(){
         initMainFrame();
         initPanels();
@@ -52,7 +51,6 @@ public class Interface {
         cancelButton = new JButton("Отмена");
 
         mainPanel.setLayout(new BorderLayout());
-        FileSystemModel fileSystemDataModel = new FileSystemModel();
         DirectoryTreeModel directoryTreeModel = new DirectoryTreeModel();
         JTree tree = new JTree(directoryTreeModel);
         JScrollPane mainPanelScroll = new JScrollPane(tree, ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS, ScrollPaneConstants.HORIZONTAL_SCROLLBAR_ALWAYS);
