@@ -1,14 +1,15 @@
-package view;
+package myFileChooser.view;
 
-import tree.DirectoryTreeModel;
-import tree.MyCellRenderer;
-import tree.NodeDirectoryTree;
+import myFileChooser.tree.TreePanel;
 
 import javax.swing.*;
-import javax.swing.event.*;
+import javax.swing.tree.TreePath;
 import java.awt.*;
 import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.io.File;
+import java.net.URL;
+import java.util.List;
 
 
 /**
@@ -16,13 +17,14 @@ import java.io.File;
  */
 public class Interface {
     private JFrame mainWindow;
-    private JPanel topPanel, mainPanel, bottomPanel;
-    private JButton homeButton, desktopButton, newFolderButton, delButton, hideButton, okButton, cancelButton, updateButton;
+    private TreePanel treePanel = new TreePanel();
     private JComboBox<String> pathComboBox;
-    JTree tree;
-    boolean passCheck = true;
-    JTextField pathField;
-    NodeDirectoryTree node;
+    private JPanel topPanel;
+    private JPanel bottomPanel;
+    JPanel newPanel;
+    JButton newFolderButton;
+    boolean collapse = true;
+
     public Interface(){
         initMainFrame();
         initPanels();
@@ -48,11 +50,16 @@ public class Interface {
         pathComboBox.setPreferredSize(new Dimension(450,25));
         pathComboBox.setBackground(Color.DARK_GRAY);
         pathComboBox.setForeground(Color.DARK_GRAY);
+        DefaultListCellRenderer listCellRenderer = new DefaultListCellRenderer();
+        listCellRenderer.setBackground(Color.DARK_GRAY);
+
+        pathComboBox.setBackground(Color.DARK_GRAY);
+
+        pathComboBox.addActionListener(e -> treePanel.goAway(pathComboBox.getSelectedItem().toString()));
         pathPanel.setLayout(new FlowLayout());
         pathPanel.add(pathComboBox);
         pathPanel.setBackground(Color.DARK_GRAY);
 
-        mainPanel = new JPanel();
         topPanel = new JPanel();
         bottomPanel = new JPanel();
 
@@ -62,57 +69,38 @@ public class Interface {
         JPanel buttonPanel = new JPanel();
         buttonPanel.setLayout(new BoxLayout(buttonPanel, BoxLayout.X_AXIS));
 
-        mainPanel.setLayout(new BorderLayout());
 
-        DirectoryTreeModel directoryTreeModel = new DirectoryTreeModel();
-        tree = new JTree(directoryTreeModel);
-        tree.setBackground(Color.DARK_GRAY);
-        tree.setRootVisible(false);
+        JButton homeButton = new JButton("Дом");
+        homeButton.addActionListener(e -> treePanel.goHome());
 
+        JButton desktopButton = new JButton("Cтол");
+        desktopButton.addActionListener(e -> treePanel.goDesktop());
 
-        tree.addTreeSelectionListener(e -> {
-            node = (NodeDirectoryTree)e.getPath().getLastPathComponent();
-            System.out.println(node.getFullPath());
-            tree.getSelectionPaths();
-        });
-        tree.addTreeExpansionListener(new TreeExpansionListener() {
-            @Override
-            public void treeExpanded(TreeExpansionEvent event) {
-                node = (NodeDirectoryTree)event.getPath().getLastPathComponent();
-                pathComboBox.addItem(node.getFullPath());
-                pathComboBox.setSelectedIndex(pathComboBox.getItemCount() - 1);
-            }
-
-            @Override
-            public void treeCollapsed(TreeExpansionEvent event) {
-
-            }
-        });
-
-        tree.setCellRenderer(new MyCellRenderer());
-
-        homeButton = new JButton("Дом");
-        homeButton.setEnabled(false);
-
-        desktopButton = new JButton("Cтол");
-        desktopButton.setEnabled(false);
 
         newFolderButton = new JButton("Папка");
-        newFolderButton.addActionListener((ActionEvent e) -> {
-            String path = pathComboBox.getItemAt(0);
+        newFolderButton.addActionListener(e -> {
+            File selectedFile = treePanel.getFile();
             String folderName = createFolder();
-            if (folderName == null) return;
-            new File(path + folderName).mkdir();
-            System.out.println("Созданная папка: " + path + folderName);
+            String path = selectedFile.getAbsolutePath() + "\\" + folderName;
+            if (folderName == null || !selectedFile.isDirectory()) return;
+            new File(path).mkdir();
+            treePanel.insertNode(path);
+            System.out.println("Созданная папка: " + path);
         });
 
-        delButton = new JButton("Удалить");
+        JButton delButton = new JButton("Удалить");
         delButton.addActionListener(e -> {
-            DelFiles del = new DelFiles(mainWindow, node);
-            del.delFolder();
+            List<File> files = treePanel.getFiles();
+            if (files == null) return;
+            for (File file : files){
+                DelFiles del = new DelFiles(treePanel, file, mainWindow);
+                del.delFolder();
+            }
+            mainWindow.repaint();
+            mainWindow.revalidate();
         });
 
-        hideButton = new JButton("Скрыть");
+        JButton hideButton = new JButton("Скрыть");
         hideButton.addActionListener(e -> {
             if (pathPanel.isVisible()){
                 hideButton.setText("Показать");
@@ -124,21 +112,27 @@ public class Interface {
             pathPanel.setVisible(!pathPanel.isVisible());
         });
 
-        okButton = new JButton("ОК");
+        JButton okButton = new JButton("ОК");
         okButton.setEnabled(false);
 
-        cancelButton = new JButton("Отмена");
+        JButton minButton = new JButton("+");
+        minButton.addActionListener(e -> {
+            if (collapse) hideButton.setText("+");
+            else hideButton.setText("-");
+            treePanel.expandAll(collapse);
+            collapse = !collapse;
+        });
+
+        JButton projectButton = new JButton("Проект");
+        projectButton.addActionListener(e -> {
+            treePanel.goAway(System.getProperty("user.dir"));
+        });
+
+        JButton cancelButton = new JButton("Отмена");
         cancelButton.addActionListener(e -> System.exit(0));
 
-        updateButton = new JButton("Обновить");
-        updateButton.setEnabled(false);
-
-        JScrollPane mainPanelScroll = new JScrollPane(tree, ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS, ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
-        mainPanelScroll.setBackground(Color.DARK_GRAY);
-
-        mainPanelScroll.getVerticalScrollBar().setOpaque(true);
-        mainPanel.add(mainPanelScroll);
-        mainPanel.setBackground(Color.DARK_GRAY);
+        JButton collapseButton = new JButton("Закрыть");
+        collapseButton.addActionListener(e -> treePanel.collapseAll());
 
         homeButton.setBorderPainted(false);
 
@@ -147,8 +141,10 @@ public class Interface {
         buttonPanel.add(desktopButton);
         buttonPanel.add(newFolderButton);
         buttonPanel.add(delButton);
-        buttonPanel.add(updateButton);
+        buttonPanel.add(collapseButton);
         buttonPanel.add(hideButton);
+        buttonPanel.add(minButton);
+        buttonPanel.add(projectButton);
         buttonPanel.setBackground(Color.DARK_GRAY);
 
         topPanel.add(buttonPanel);
@@ -161,8 +157,9 @@ public class Interface {
         bottomPanel.setBackground(Color.DARK_GRAY);
 
         mainWindow.add(topPanel, BorderLayout.NORTH);
-        mainWindow.add(mainPanelScroll, BorderLayout.CENTER);
         mainWindow.add(bottomPanel, BorderLayout.SOUTH);
+        newPanel = treePanel.getTree(this);
+        mainWindow.add(newPanel, BorderLayout.CENTER);
     }
 
     private String createFolder(){
@@ -172,5 +169,19 @@ public class Interface {
                 "Введите имя папки",
                 "Создание папки",
                 JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    public void hideButton(boolean state){
+        newFolderButton.setEnabled(state);
+    }
+
+    public void addPath(String path){
+        for (int item = 0; item <= pathComboBox.getItemCount(); item++)
+            if (path.equals(pathComboBox.getItemAt(item))){
+                pathComboBox.setSelectedIndex(item);
+                return;
+            }
+        pathComboBox.addItem(path);
+        pathComboBox.setSelectedIndex(pathComboBox.getItemCount() - 1);
     }
 }

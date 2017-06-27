@@ -63,6 +63,7 @@ public class NodeDirectoryTree {
     private void createSonsList(){
         sonsIsCreate = true;
         sonsList = new ArrayList<>();
+        List<NodeDirectoryTree> fileList = new ArrayList<>();
         File[] listOfFiles;
         if (fullPath.equals("/home")){
             listOfFiles = File.listRoots();
@@ -72,7 +73,6 @@ public class NodeDirectoryTree {
         }
 
         assert listOfFiles != null;
-        int n = listOfFiles.length;
         for (File listOfFile : listOfFiles) {
             if (listOfFile.isDirectory()) {
                 if (fullPath.equals("/home")) {
@@ -86,7 +86,23 @@ public class NodeDirectoryTree {
                 } else {
                     sonsList.add(new NodeDirectoryTree(fullPath + "/" + listOfFile.getName()));
                 }
+            } else if (listOfFile.isFile())
+            {
+                if (fullPath.equals("/home")) {
+                    String name = "";
+                    String path = listOfFile.getAbsolutePath();
+                    int m = path.length();
+                    for (int j = 0; j < m - 1; j++) {
+                        name = name + path.charAt(j);
+                    }
+                    fileList.add(new NodeDirectoryTree("/" + name + "/"));
+                } else {
+                    fileList.add(new NodeDirectoryTree(fullPath + "/" + listOfFile.getName()));
+                }
             }
+        }
+        for (NodeDirectoryTree tempNode: fileList) {
+            sonsList.add(tempNode);
         }
     }
 }
