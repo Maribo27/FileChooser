@@ -1,52 +1,60 @@
 package myFileChooser.view;
 
-import myFileChooser.tree.TreePanel;
+import myFileChooser.controller.FileController;
 
 import javax.swing.*;
 import java.awt.*;
 import java.io.File;
-
-import static view.Const.PASSWORD;
 
 /**
  * Created by Maria on 24.06.2017.
  */
 class DelFiles {
 
-    private JFrame passwordFrame;
+    private JDialog passwordFrame;
     private JLabel label;
     private JPasswordField passwordField;
     private JButton decline;
     private JButton accept;
-    private JFrame frame;
     private File fileToDel;
-    private TreePanel panel;
+    private FileController controller;
 
-    DelFiles(TreePanel panel, File file, JFrame frame){
-        this.panel = panel;
+    DelFiles(FileController controller, File file){
+        this.controller = controller;
         fileToDel = file;
-        this.frame = frame;
-        this.frame.setEnabled(false);
-        passwordFrame = new JFrame("Ввод пароля");
-        label = new JLabel("Будут удален(ы) файл(ы): " + fileToDel.getName());
+        JFrame frame = null;
+        passwordFrame = new JDialog(frame, "Ввод пароля", true);
+        label = new JLabel("Будут удален файл/папка: " + fileToDel.getName());
         passwordField = new JPasswordField(16);
         decline = new JButton("Отклонить");
         accept = new JButton("Принять");
     }
 
     void delFolder(){
-        passwordFrame.setLayout(new FlowLayout());
+        passwordFrame.setLayout(new BorderLayout());
+        controller.disabledFrame(false);
         passwordFrame.setResizable(false);
         passwordFrame.setEnabled(true);
-        passwordFrame.setBackground(Color.DARK_GRAY);
-        passwordFrame.add(label);
-        passwordFrame.add(passwordField);
-        passwordFrame.add(accept);
-        passwordFrame.add(decline);
+        JPanel passPanel = new JPanel();
+        passPanel.setLayout(new BoxLayout(passPanel, BoxLayout.Y_AXIS));
+        label.setAlignmentX(JComponent.CENTER_ALIGNMENT);
+        JLabel label2 = new JLabel("Введите пароль");
+        label2.setAlignmentX(JComponent.CENTER_ALIGNMENT);
+        label.setFont(new Font("Arial", Font.PLAIN, 14));
+        label2.setFont(new Font("Arial", Font.PLAIN, 14));
+        passPanel.add(label);
+        passPanel.add(label2);
+        passPanel.add(passwordField);
+        JPanel butPanel = new JPanel();
+        butPanel.setLayout(new BoxLayout(butPanel, BoxLayout.X_AXIS));
+        butPanel.add(accept);
+        butPanel.add(decline);
+        passPanel.add(butPanel);
+        passwordFrame.add(passPanel, BorderLayout.CENTER);
         passwordFrame.pack();
 
         decline.addActionListener(e -> {
-            frame.setEnabled(true);
+            controller.disabledFrame(true);
             passwordFrame.dispose();
         });
         accept.addActionListener(e -> {
@@ -55,24 +63,23 @@ class DelFiles {
             for (char pas : pass) {
                 password += pas;
             }
-            if (!password.equals(PASSWORD)){
+            if (!password.equals(Const.PASSWORD)){
                 JOptionPane.showMessageDialog(JOptionPane.getRootFrame(), "Пароль неверный", "Ошибка",
                         JOptionPane.WARNING_MESSAGE);
                 passwordField.selectAll();
             }
             else {
                 recursiveDelete(fileToDel);
-                frame.setEnabled(true);
+                controller.disabledFrame(true);
                 passwordFrame.dispose();
             }
         });
-
-        passwordFrame.setVisible(true);
         passwordFrame.setLocationRelativeTo(null);
+        passwordFrame.setVisible(true);
     }
 
     private void recursiveDelete(File file) {
-        panel.delNode(file);
+        controller.delNode(file);
         if (!file.exists())
             return;
 
@@ -81,7 +88,10 @@ class DelFiles {
                 recursiveDelete(f);
             }
         }
-        file.delete();
-        System.out.println("Удаленный файл/папка: " + file.getAbsolutePath());
+
+        if (file.delete())
+            System.out.println("Удаленный файл/папка: " + file.getAbsolutePath());
+        else
+            System.out.println("Невозможно удалить файл/папку: " + file.getAbsolutePath());
     }
 }

@@ -1,51 +1,52 @@
 package myFileChooser.tree;
 
-import myFileChooser.view.Interface;
+import myFileChooser.controller.DragDropListener;
+import myFileChooser.controller.FileController;
 
 import javax.swing.*;
-import javax.swing.event.*;
-import javax.swing.tree.*;
+import javax.swing.event.TreeExpansionEvent;
+import javax.swing.event.TreeExpansionListener;
+import javax.swing.tree.DefaultMutableTreeNode;
+import javax.swing.tree.DefaultTreeModel;
+import javax.swing.tree.TreePath;
 import java.awt.*;
+import java.awt.dnd.DropTarget;
 import java.io.File;
-import java.util.*;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
+import java.util.Vector;
 
 /**
  * Created by Maria on 24.06.2017.
  */
 public class TreePanel {
 
-    private JPanel mainPanel;
+    private FileController controller;
     private ArrayList<Directory> allNodes;
-    DefaultMutableTreeNode root;
-    DefaultTreeModel treeModel;
-    JTree tree;
-    File selectFile;
-    Interface view;
-    DefaultMutableTreeNode homeRoot;
-    int homeIndex;
-    int delta;
-    List <File> selectedFiles = new ArrayList<>();
-    TreePath[] treePaths;
+    private List <File> selectedFiles = new ArrayList<>();
+    private DefaultTreeModel treeModel;
+    private JTree tree;
+    private File selectFile;
+    private boolean fileMode;
+    private int delta;
 
-    public JPanel getTree(Interface view){
-        this.view = view;
-        mainPanel = new JPanel();
+    public TreePanel(FileController controller, boolean fileMode) {
+        this.controller = controller;
+        this.fileMode = fileMode;
+    }
+
+    public JPanel getTree(){
+        JPanel mainPanel = new JPanel();
         mainPanel.setLayout(new BorderLayout());
         allNodes = new ArrayList<>();
-        root = new DefaultMutableTreeNode("Мой компьютер", true);
+        DefaultMutableTreeNode root = new DefaultMutableTreeNode("Мой компьютер", true);
 
-        int counter = 0;
         for (File f: File.listRoots())
             if (f.isDirectory()){
                 DefaultMutableTreeNode node = new DefaultMutableTreeNode(f, true);
-                if (node.toString().equals("C:\\")) {
-                    homeRoot = node;
-                    homeIndex = counter;
-                }
-                counter++;
                 root.add(node);
-                Directory newDirectoryNode = new Directory(node, f);
+                Directory newDirectoryNode = new Directory(node, f, controller);
                 allNodes.add(newDirectoryNode);
             }
 
@@ -53,7 +54,7 @@ public class TreePanel {
         tree = new JTree(treeModel);
 
         tree.setRootVisible(false);
-        tree.setCellRenderer(new tree.MyCellRenderer());
+        tree.setCellRenderer(new MyCellRenderer());
 
         tree.addTreeExpansionListener(new TreeExpansionListener() {
             @Override
@@ -61,7 +62,7 @@ public class TreePanel {
                 DefaultMutableTreeNode selectedNode = (DefaultMutableTreeNode)event.getPath().getLastPathComponent();
                 for (Directory node : allNodes)
                     if (node.getNode().toString().equalsIgnoreCase(selectedNode.toString())) {
-                    node.showChildrens(allNodes, treeModel);
+                    node.showChildrens(allNodes, treeModel, fileMode);
                         break;
                     }
             }
@@ -92,17 +93,22 @@ public class TreePanel {
                 if (select && (selectFile == null || !(selectFile.getAbsolutePath().equals(node.getFile().getAbsolutePath())))){
                     selectFile = node.getFile();
                     System.out.println("Выбран файл/папка: " + selectFile.getAbsolutePath());
-                    view.addPath(selectFile.getAbsolutePath());
+                    controller.addPath(selectFile.getAbsolutePath());
                     break;
                 }
             }
-            if (selectFile.isFile()) view.hideButton(false);
-            else view.hideButton(true);
+            if (tree.isSelectionEmpty()) controller.hideDelButton(false);
+            else controller.hideDelButton(true);
+            if (tree.isSelectionEmpty() || selectFile.isFile() || tree.getSelectionRows().length != 1) controller.hideButton(false);
+            else controller.hideButton(true);
         });
 
-        JScrollPane mainPanelScroll = new JScrollPane(tree, ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS, ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+        JScrollPane mainPanelScroll = new JScrollPane(tree, ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED, ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
         tree.setBackground(Color.DARK_GRAY);
         mainPanel.add(mainPanelScroll);
+
+        DragDropListener myDragDropListener = new DragDropListener(controller);
+        new DropTarget(mainPanel, myDragDropListener);
         return mainPanel;
     }
 
@@ -111,6 +117,7 @@ public class TreePanel {
     }
 
     public List<File> getFiles(){
+        TreePath[] treePaths;
         if (!tree.isSelectionEmpty()) treePaths = tree.getSelectionPaths();
         else return null;
         if (!selectedFiles.isEmpty()) selectedFiles.clear();
@@ -143,7 +150,7 @@ public class TreePanel {
 
     public void delNode(File file){
         for (Directory node : allNodes) {
-            if (file.getAbsolutePath() == node.getFile().getAbsolutePath()){
+            if (Objects.equals(file.getAbsolutePath(), node.getFile().getAbsolutePath())){
                 node.getNode().removeFromParent();
                 allNodes.remove(node);
                 break;
@@ -161,59 +168,6 @@ public class TreePanel {
             }
     }
 
-    public void goHome(){
-        tree.clearSelection();
-        //for(int row = tree.getRowCount() - 1; row >= 0; row--)
-        //    tree.collapseRow(row);
-        tree.expandRow(homeIndex);
-        for (int count = 0; count < homeRoot.getChildCount(); count++){
-            DefaultMutableTreeNode tempNode = (DefaultMutableTreeNode) homeRoot.getChildAt(count);
-            if (tempNode.toString().equals("Users"))
-            {
-                tree.expandRow(count + homeIndex + 1);
-                for (int temp = 0; temp < tempNode.getChildCount(); temp++){
-                    if (tempNode.getChildAt(temp).toString().equals("bogum_000"))
-                    {
-                        tree.expandRow(temp + count + homeIndex + 2);
-                        tree.setSelectionRow(temp + count + homeIndex + 2);
-                        break;
-                    }
-                }
-                break;
-            }
-        }
-    }
-
-    public void goDesktop(){
-        //for(int row = tree.getRowCount() - 1; row >= 0; row--)
-        //    tree.collapseRow(row);
-        tree.clearSelection();
-        tree.expandRow(homeIndex);
-        for (int countUsr = 0; countUsr < homeRoot.getChildCount(); countUsr++){
-            DefaultMutableTreeNode tempNode = (DefaultMutableTreeNode) homeRoot.getChildAt(countUsr);
-            if (tempNode.toString().equals("Users"))
-            {
-                tree.expandRow(countUsr + homeIndex + 1);
-                for (int countBgm = 0; countBgm < tempNode.getChildCount(); countBgm++){
-                    if (tempNode.getChildAt(countBgm).toString().equals("bogum_000"))
-                    {
-                        DefaultMutableTreeNode deskNode = (DefaultMutableTreeNode) tempNode.getChildAt(countBgm);
-                        tree.expandRow(countBgm + countUsr + homeIndex + 2);
-                        for (int countDesk = 0; countDesk < deskNode.getChildCount(); countDesk++){
-                            if (deskNode.getChildAt(countDesk).toString().equals("Desktop"))
-                            {
-                                tree.expandRow(countDesk + countBgm + countUsr + homeIndex + 3);
-                                tree.setSelectionRow(countDesk + countBgm + countUsr + homeIndex + 3);
-                                break;
-                            }
-                        }
-                    }
-                }
-                break;
-            }
-        }
-    }
-
     public void goAway(String fullpath){
 
         if (selectFile != null && selectFile.getAbsolutePath().equals(fullpath)) return;
@@ -222,48 +176,43 @@ public class TreePanel {
             if (fullpath.charAt(charNumber) != '\\') fileName += fullpath.charAt(charNumber);
             else{
                 String cutPath = fullpath.substring(charNumber + 1, fullpath.length());
-                for(int row = tree.getRowCount() - 1; row >= 0; row--)
-                    tree.collapseRow(row);
-                expand(root, fileName + "\\", cutPath, 0);
+                expand(fileName + "\\", cutPath);
                 break;
             }
         }
-
     }
 
-    void expand(DefaultMutableTreeNode node, String fileName, String path, int row){
+    private void expand(String fileName, String path){
         if (fileName.equals("")) {
-            tree.setSelectionRow(row - 1);
             return;
         }
-        for (int count = 0; count < node.getChildCount(); count++)
-            if (node.getChildAt(count).toString().equals(fileName)) {
-                tree.expandRow(count + row);
-                row += count;
-                node = (DefaultMutableTreeNode) node.getChildAt(count);
+        for (int count = 0; count < tree.getRowCount(); count++) {
+            if (tree.getPathForRow(count).getLastPathComponent().toString().equals(fileName)) {
+                tree.setSelectionRow(count);
+                tree.expandRow(count);
                 break;
             }
-
+        }
         String cutPath;
         fileName = "";
         for (int charNumber = 0; charNumber < path.length(); charNumber++){
             if (path.charAt(charNumber) != '\\') fileName += path.charAt(charNumber);
             else{
                 cutPath = path.substring(charNumber + 1, path.length());
-                expand(node, fileName, cutPath, row + 1);
+                expand(fileName, cutPath);
                 return;
             }
         }
-        expand(node, fileName, "", row + 1);
+        expand(fileName, "");
     }
 
-    public void expandAll(boolean mode){
+    public void expandAll(){
         int currentRow;
         if (!tree.isSelectionEmpty()) currentRow = tree.getSelectionRows()[0];
         else return;
 
 
-        if (mode){
+        if (!tree.isExpanded(currentRow)){
             int check = 0;
             int countOfRows = tree.getRowCount();
             delta = tree.getRowCount() - countOfRows;
@@ -279,8 +228,29 @@ public class TreePanel {
                 tree.collapseRow(iterator);
         }
     }
+
     public void collapseAll(){
-        for (int iterator = tree.getRowCount() - 1; iterator > 0; iterator--)
-                tree.collapseRow(iterator);
+        for (int iterator = tree.getRowCount() - 1; iterator >= 0; iterator--)
+            tree.collapseRow(iterator);
+    }
+
+    public int[] returnSelection(){
+        return tree.getSelectionRows();
+    }
+
+    public Vector<Integer>  returnExpands(){
+        Vector<Integer> expandedRows = new Vector<>();
+        for (int iterator = 0; iterator < tree.getRowCount(); iterator++)
+            if (tree.isExpanded(iterator)) expandedRows.add(iterator);
+        return expandedRows;
+    }
+
+    public void setExpands(Vector<Integer> expandedRows){
+        for (int iterator = 0; iterator < expandedRows.size(); iterator++)
+            tree.expandRow(expandedRows.elementAt(iterator));
+    }
+
+    public void setSelection(int[] selection){
+        tree.setSelectionRows(selection);
     }
 }
