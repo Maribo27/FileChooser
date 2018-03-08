@@ -12,14 +12,16 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Vector;
 
-import static by.maribo.file_chooser.view.InterfaceConst.*;
-
 
 /**
  * Created by Maria on 15.06.2017.
  */
 public class Interface {
-    private FileController controller;
+	private final static String DESKTOP = "\\Desktop";
+	private static final String DISK = "^\\D:\\$";
+	private static final String USER_HOME = "user.home";
+
+	private FileController controller;
     private JDialog mainWindow;
     private JComboBox<String> pathComboBox;
     private JPanel topPanel;
@@ -46,6 +48,7 @@ public class Interface {
         initBottomPanel(mode);
         mainWindow.setVisible(true);
     }
+
     public void createOpenDialog(){
         press = false;
         initMainFrame(new JFrame(), "Открыть файл:");
@@ -88,21 +91,21 @@ public class Interface {
         buttonPanel.setFloatable(false);
         buttonPanel.setOpaque(false);
 
-        JButton homeButton = new JButton(HOME_IMAGE);
+        JButton homeButton = new JButton(getIcon("home.png"));
         homeButton.setToolTipText("Домашняя папка");
         homeButton.setBorderPainted(false);
         homeButton.setFocusPainted(false);
         homeButton.setContentAreaFilled(false);
-        homeButton.addActionListener(e -> controller.goAway(HOME));
+        homeButton.addActionListener(e -> controller.goAway(System.getProperty(USER_HOME)));
 
-        JButton desktopButton = new JButton(DESKTOP_IMAGE);
+        JButton desktopButton = new JButton(getIcon("desktop.png"));
         desktopButton.setToolTipText("Рабочий стол");
         desktopButton.setBorderPainted(false);
         desktopButton.setFocusPainted(false);
         desktopButton.setContentAreaFilled(false);
-        desktopButton.addActionListener(e -> controller.goAway(DESKTOP));
+        desktopButton.addActionListener(e -> controller.goAway(System.getProperty(USER_HOME) + DESKTOP));
 
-        newFolderButton = new JButton(CREATE_FOLDER_IMAGE);
+        newFolderButton = new JButton(getIcon("createFolder.png"));
         newFolderButton.setEnabled(false);
         newFolderButton.setToolTipText("Создать папку");
         newFolderButton.setBorderPainted(false);
@@ -112,10 +115,16 @@ public class Interface {
             File selectedFile = controller.getFile();
             String folderName = createFolder();
             String path;
-            if (selectedFile.getAbsolutePath().equals("C:\\") ||selectedFile.getAbsolutePath().equals("M:\\")
-                    ||selectedFile.getAbsolutePath().equals("D:\\")) path = selectedFile.getAbsolutePath() + folderName;
-            else path = selectedFile.getAbsolutePath() + "\\" + folderName;
-            if (folderName == null || !selectedFile.isDirectory()) return;
+	        boolean disk = selectedFile.getAbsolutePath().matches(DISK);
+	        if (disk) {
+	            path = selectedFile.getAbsolutePath() + folderName;
+            } else {
+	            path = selectedFile.getAbsolutePath() + "\\" + folderName;
+            }
+
+            if (folderName == null || !selectedFile.isDirectory()) {
+	            return;
+            }
             if (new File(path).exists()) {
                 JOptionPane.showMessageDialog(JOptionPane.getRootFrame(), "Такая папка уже существует", "Ошибка",
                         JOptionPane.WARNING_MESSAGE);
@@ -126,7 +135,7 @@ public class Interface {
             System.out.println("Создана папка: " + path);
         });
 
-        delButton = new JButton(DELETE_IMAGE);
+        delButton = new JButton(getIcon("delete.png"));
         delButton.setToolTipText("Удалить");
         newFolderButton.setEnabled(false);
         delButton.setBorderPainted(false);
@@ -143,7 +152,7 @@ public class Interface {
             mainWindow.revalidate();
         });
 
-        JButton hidePathButton = new JButton(HIDE_PATH_IMAGE);
+        JButton hidePathButton = new JButton(getIcon("hiddenDir.png"));
         hidePathButton.setToolTipText("Скрыть/показать путь");
         hidePathButton.setBorderPainted(false);
         hidePathButton.setFocusPainted(false);
@@ -166,14 +175,14 @@ public class Interface {
         JButton okButton = new JButton("ОК");
         okButton.setEnabled(false);
 
-        JButton minButton = new JButton(MINIMIZE_IMAGE);
+        JButton minButton = new JButton(getIcon("minimize.png"));
         minButton.setToolTipText("Закрыть/открыть папки");
         minButton.setBorderPainted(false);
         minButton.setFocusPainted(false);
         minButton.setContentAreaFilled(false);
         minButton.addActionListener(e -> controller.expandAll());
 
-        JButton projectButton = new JButton(PROJECT_IMAGE);
+        JButton projectButton = new JButton(getIcon("project.png"));
         projectButton.setToolTipText("Расположение проекта");
         projectButton.setBorderPainted(false);
         projectButton.setFocusPainted(false);
@@ -183,21 +192,21 @@ public class Interface {
         JButton cancelButton = new JButton("Отмена");
         cancelButton.addActionListener(e -> System.exit(0));
 
-        JButton collapseButton = new JButton(COLLAPSE_IMAGE);
+        JButton collapseButton = new JButton(getIcon("close.png"));
         collapseButton.setToolTipText("Закрыть все ветви");
         collapseButton.setBorderPainted(false);
         collapseButton.setFocusPainted(false);
         collapseButton.setContentAreaFilled(false);
         collapseButton.addActionListener(e -> controller.collapseAll());
 
-        JButton updateButton = new JButton(UPDATE_IMAGE);
+        JButton updateButton = new JButton(getIcon("update.png"));
         updateButton.setToolTipText("Обновить");
         updateButton.setBorderPainted(false);
         updateButton.setFocusPainted(false);
         updateButton.setContentAreaFilled(false);
         updateButton.addActionListener(e -> synchronize(fileMode));
 
-        JButton hideButton = new JButton(HIDE_IMAGE);
+        JButton hideButton = new JButton(getIcon("hideFiles.png"));
         hideButton.setToolTipText("Показать/скрыть скрытые файлы");
         hideButton.setBorderPainted(false);
         hideButton.setFocusPainted(false);
@@ -312,11 +321,16 @@ public class Interface {
     }
 
     public String getFileName(){
-        if (!textField.getText().contains(".xml")) textField.setText(textField.getText() + ".xml");
-        for (File f: File.listRoots())
-            if (f.isDirectory())
-                if (f.getAbsolutePath().equals(controller.getFile().getAbsolutePath()))
-                    return controller.getFile().getAbsolutePath() + textField.getText();
+        if (!textField.getText().contains(".xml")) {
+	        textField.setText(textField.getText() + ".xml");
+        }
+
+        for (File f: File.listRoots()) {
+	        boolean directory = f.isDirectory() || f.getAbsolutePath().equals(controller.getFile().getAbsolutePath());
+	        if (directory) {
+		        return controller.getFile().getAbsolutePath() + textField.getText();
+	        }
+        }
         return controller.getFile().getAbsolutePath() + "\\" + textField.getText();
     }
 
@@ -324,4 +338,13 @@ public class Interface {
         mainWindow.setEnabled(dis);
         mainWindow.setFocusable(dis);
     }
+
+	private ImageIcon getIcon(String fileName) {
+		String folder = "pictures/";
+		String path = Objects.requireNonNull(getClass().getClassLoader().getResource(folder + fileName)).getPath();
+        path = path.replaceAll("%5b", "[");
+        path = path.replaceAll("%5d", "]");
+        path = path.replaceAll("%20", " ");
+        return new ImageIcon(path);
+	}
 }

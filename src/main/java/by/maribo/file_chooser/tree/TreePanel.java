@@ -137,7 +137,9 @@ public class TreePanel {
 	        for (Directory node : allNodes) {
                 DefaultMutableTreeNode tempCheck2 = node.getNode();
 	            int check = selectedNode.getLevel();
-                if (!tempCheck2.toString().equals(selectedNode.toString())) continue;
+                if (!tempCheck2.toString().equals(selectedNode.toString())) {
+	                continue;
+                }
 		        boolean select = isSelect(false, tempCheck2, selectedNode, check);
 		        if (select){
                     selectedFiles.add(node.getFile());

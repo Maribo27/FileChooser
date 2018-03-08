@@ -5,6 +5,7 @@ import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeCellRenderer;
 import java.awt.*;
 import java.io.File;
+import java.util.Objects;
 
 /**
  * Created by Maria on 20.06.2017.
@@ -28,14 +29,9 @@ public class CellRenderer extends DefaultTreeCellRenderer {
 
     @Override
     public Component getTreeCellRendererComponent(final JTree tree, final Object value, final boolean selected, final boolean expanded, final boolean leaf, final int row, final boolean hasFocus) {
-        ImageIcon leafIcon = new ImageIcon("pictures\\pictures\\files\\file.png");
-        this.setLeafIcon(leafIcon);
-
-        ImageIcon folderIcon = new ImageIcon("pictures\\pictures\\files\\folder.png");
-        this.setClosedIcon(folderIcon);
-
-        ImageIcon openIcon = new ImageIcon("pictures\\pictures\\files\\open.png");
-        this.setOpenIcon(openIcon);
+        this.setLeafIcon(getFileIconPath("file.png"));
+        this.setClosedIcon(getFileIconPath("folder.png"));
+        this.setOpenIcon(getFileIconPath("open.png"));
 
         DefaultMutableTreeNode node = (DefaultMutableTreeNode) value;
         final Component component = super.getTreeCellRendererComponent(tree, value, selected, expanded, leaf, row, hasFocus);
@@ -52,10 +48,12 @@ public class CellRenderer extends DefaultTreeCellRenderer {
             checkRoot = true;
         }
         File tempFile = new File(filepath.toString());
-        if (tempFile.isHidden() && checkRoot && tempFile.isDirectory())
-            this.setIcon(new ImageIcon("pictures\\pictures\\files\\hide.png"));
-        if (tempFile.isHidden() && checkRoot && tempFile.isFile())
-            this.setIcon(new ImageIcon("pictures\\pictures\\files\\hideFile.png"));
+        if (tempFile.isHidden() && checkRoot && tempFile.isDirectory()) {
+            this.setIcon(getFileIconPath("hide.png"));
+        }
+        if (tempFile.isHidden() && checkRoot && tempFile.isFile()) {
+            this.setIcon(getFileIconPath("hideFile.png"));
+        }
         StringBuilder path = new StringBuilder();
         for (int pathCount = 1; pathCount < o.length-1; pathCount++) {
             path.append(o[pathCount]);
@@ -63,5 +61,14 @@ public class CellRenderer extends DefaultTreeCellRenderer {
                 path.append('\\');
         }
         return component;
+    }
+
+    private ImageIcon getFileIconPath(String fileName) {
+        String folder = "pictures/files/";
+        String path = Objects.requireNonNull(getClass().getClassLoader().getResource(folder + fileName)).getPath();
+        path = path.replaceAll("%5b", "[");
+        path = path.replaceAll("%5d", "]");
+        path = path.replaceAll("%20", " ");
+        return new ImageIcon(path);
     }
 }
